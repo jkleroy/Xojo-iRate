@@ -77,12 +77,12 @@ Protected Class jly_iRate
 	#tag Method, Flags = &h0
 		Sub init()
 		  
-		  declare function NSClassFromString lib FoundationLib (clsName as CFStringRef) as ptr
-		  declare function mainBundle lib FoundationLib selector "mainBundle" (clsRef as ptr) as ptr
-		  declare function objectForInfoDictionaryKey lib FoundationLib selector "objectForInfoDictionaryKey:" _
+		  declare function NSClassFromString lib "Foundation.framework" (clsName as CFStringRef) as ptr
+		  declare function mainBundle lib "Foundation.framework" selector "mainBundle" (clsRef as ptr) as ptr
+		  declare function objectForInfoDictionaryKey lib "Foundation.framework" selector "objectForInfoDictionaryKey:" _
 		  (obj_id as ptr, key as CFStringRef) as CFStringRef
 		  
-		  Declare Function getbundleIdentifier lib FoundationLib selector "bundleIdentifier" (id as ptr) as CFStringRef
+		  Declare Function getbundleIdentifier lib "Foundation.framework" selector "bundleIdentifier" (id as ptr) as CFStringRef
 		  
 		  
 		  self.appStoreCountry = xojo.core.locale.Current.Identifier
@@ -172,6 +172,10 @@ Protected Class jly_iRate
 		End Sub
 	#tag EndMethod
 
+	#tag ExternalMethod, Flags = &h0
+		Declare Function NSClassFromString Lib "Foundation.framework" (clsName as CFStringRef) As Ptr
+	#tag EndExternalMethod
+
 	#tag Method, Flags = &h0, Description = 4F70656E732074686520526174696E6773207061676520696E204170702053746F7265
 		Sub openRatingsPageInAppStore()
 		  
@@ -252,8 +256,8 @@ Protected Class jly_iRate
 		    #if TargetIOS
 		      
 		      
-		      declare function currentDevice_ lib UIKitLib selector "currentDevice" (clsRef as ptr) as ptr
-		      declare function systemversion_ lib UIKitLib selector "systemVersion" (obj_id as ptr) as CFStringRef
+		      declare function currentDevice_ lib "UIKit.framework" selector "currentDevice" (clsRef as ptr) as ptr
+		      declare function systemversion_ lib "UIKit.framework" selector "systemVersion" (obj_id as ptr) as CFStringRef
 		      Dim device as Ptr = currentDevice_(NSClassFromString("UIDevice"))
 		      Dim systemVersion As Text = systemversion_(device)
 		      Dim sSystemVersion As Double
@@ -267,8 +271,8 @@ Protected Class jly_iRate
 		      if sSystemVersion >= 10.3 and not defaultOldRatingSystem then
 		        
 		        
-		        declare function NSClassFromString lib FoundationLib (clsName as CFStringRef) as ptr
-		        declare sub requestReview_ lib StoreKit.StoreKitLib selector "requestReview" (obj_id as ptr)
+		        declare function NSClassFromString lib "Foundation.framework" (clsName as CFStringRef) as ptr
+		        declare sub requestReview_ lib "StoreKit.framework" selector "requestReview" (obj_id as ptr)
 		        
 		        requestReview_(NSClassFromString("SKStoreReviewController"))
 		        
@@ -325,10 +329,11 @@ Protected Class jly_iRate
 	#tag Method, Flags = &h1
 		Protected Sub promptIfNetworkAvailable()
 		  
-		  Dim www As new Extensions.Reachability
-		  if www.isNotReachable then
-		    Return
-		  end if
+		  //Available if iOSKit is used
+		  'Dim www As new Extensions.Reachability
+		  'if www.isNotReachable then
+		  'Return
+		  'end if
 		  
 		  promptForRating()
 		End Sub
@@ -479,11 +484,11 @@ Protected Class jly_iRate
 		Private Function StandardUserDefaults() As ptr
 		  
 		  
-		  declare function standardUserDefaults_ lib FoundationLib selector "standardUserDefaults" (clsRef as ptr) as ptr
+		  declare function standardUserDefaults_ lib "Foundation.framework" selector "standardUserDefaults" (clsRef as ptr) as ptr
 		  static ClassRef as ptr = NSClassFromString("NSUserDefaults")
-		  declare function alloc lib FoundationLib selector "alloc" (clsRef as ptr) as ptr
+		  declare function alloc lib "Foundation.framework" selector "alloc" (clsRef as ptr) as ptr
 		  
-		  declare function initWithSuiteName_ lib FoundationLib selector "initWithSuiteName:" (obj_id as ptr, suitename as CFStringRef) as ptr
+		  declare function initWithSuiteName_ lib "Foundation.framework" selector "initWithSuiteName:" (obj_id as ptr, suitename as CFStringRef) as ptr
 		  'Dim defaults as ptr = initWithSuiteName_(alloc(ClassRef), standardUserDefaults_(ClassRef)) )
 		  Static defaults As ptr = standardUserDefaults_(ClassRef)
 		  
@@ -498,7 +503,7 @@ Protected Class jly_iRate
 		  Dim defaults As ptr = StandardUserDefaults()
 		  
 		  
-		  declare function integerForKey_ lib FoundationLib selector "integerForKey:" (obj_id as ptr, defaultName as CFStringRef) as Integer
+		  declare function integerForKey_ lib "Foundation.framework" selector "integerForKey:" (obj_id as ptr, defaultName as CFStringRef) as Integer
 		  Return integerForKey_(defaults, defaultName)
 		End Function
 	#tag EndMethod
@@ -507,7 +512,7 @@ Protected Class jly_iRate
 		Private Sub StandardUserDefaultsRemoveObjectForKey(defaultName As Text)
 		  Dim defaults As ptr = StandardUserDefaults()
 		  
-		  declare sub removeObjectForKey_ lib FoundationLib selector "removeObjectForKey:" (obj_id as ptr, defaultName as CFStringRef)
+		  declare sub removeObjectForKey_ lib "Foundation.framework" selector "removeObjectForKey:" (obj_id as ptr, defaultName as CFStringRef)
 		  removeObjectForKey_(defaults, defaultName)
 		  
 		  
@@ -521,7 +526,7 @@ Protected Class jly_iRate
 		  Dim defaults As ptr = StandardUserDefaults()
 		  
 		  
-		  declare sub setInteger_ lib FoundationLib selector "setInteger:forKey:" (obj_id as ptr, value as Integer, defaultName as CFStringRef)
+		  declare sub setInteger_ lib "Foundation.framework" selector "setInteger:forKey:" (obj_id as ptr, value as Integer, defaultName as CFStringRef)
 		  setInteger_(defaults, value, defaultName)
 		End Sub
 	#tag EndMethod
@@ -531,12 +536,12 @@ Protected Class jly_iRate
 		  Dim defaults As ptr = StandardUserDefaults()
 		  
 		  
-		  declare function stringWithString lib FoundationLib selector "stringWithString:" ( cls as Ptr, value as CFStringRef ) as Ptr
+		  declare function stringWithString lib "Foundation.framework" selector "stringWithString:" ( cls as Ptr, value as CFStringRef ) as Ptr
 		  
 		  
 		  Dim s As ptr = stringWithString( NSClassFromString("NSString"), value)
 		  
-		  declare sub setObject_ lib FoundationLib selector "setObject:forKey:" (obj_id as ptr, value as ptr, defaultName as CFStringRef)
+		  declare sub setObject_ lib "Foundation.framework" selector "setObject:forKey:" (obj_id as ptr, value as ptr, defaultName as CFStringRef)
 		  setObject_(defaults, s, defaultName)
 		End Sub
 	#tag EndMethod
@@ -545,7 +550,7 @@ Protected Class jly_iRate
 		Private Sub StandardUserDefaultsSynchronize()
 		  
 		  
-		  declare function synchronize_ lib FoundationLib selector "synchronize" (obj_id as ptr) as Boolean
+		  declare function synchronize_ lib "Foundation.framework" selector "synchronize" (obj_id as ptr) as Boolean
 		  call synchronize_(StandardUserDefaults)
 		End Sub
 	#tag EndMethod
@@ -555,7 +560,7 @@ Protected Class jly_iRate
 		  Dim defaults As ptr = StandardUserDefaults()
 		  
 		  
-		  declare function stringForKey_ lib FoundationLib selector "stringForKey:" (obj_id as ptr, defaultName as CFStringRef) as CFStringRef
+		  declare function stringForKey_ lib "Foundation.framework" selector "stringForKey:" (obj_id as ptr, defaultName as CFStringRef) as CFStringRef
 		  Return stringForKey_(defaults, defaultName)
 		End Function
 	#tag EndMethod
@@ -821,11 +826,11 @@ Protected Class jly_iRate
 			  
 			  if self.appStoreGenreID = kAppStoreGameGenreID then
 			    
-			    Return LabelGameMessage.ReplaceAll("%@", localAppName) 'self.applicationName)
+			    Return LabelGameMessage.ReplaceAll("%@", applicationName) 'self.applicationName)
 			    
 			  Else
 			    
-			    Return LabelAppMessage.ReplaceAll("%@", localAppName) 'self.applicationName)
+			    Return LabelAppMessage.ReplaceAll("%@", applicationName) 'self.applicationName)
 			    
 			  end if
 			End Get
@@ -836,7 +841,7 @@ Protected Class jly_iRate
 	#tag ComputedProperty, Flags = &h0
 		#tag Getter
 			Get
-			  return LabelMessageTitle.Replace("%@", localAppName) 'self.applicationName)
+			  return LabelMessageTitle.Replace("%@", applicationName) 'self.applicationName)
 			End Get
 		#tag EndGetter
 		messageTitle As Text
