@@ -132,12 +132,16 @@ Protected Class jly_iRate
 		  
 		  Dim lastUsedVersion As Text = StandardUSerDefaultsTextForKey(kLastVersionUsedKey)
 		  
-		  if firstUsed is nil or lastUsedVersion <> self.applicationVersion then
+		  If firstUsed Is Nil Or lastUsedVersion <> Self.applicationVersion Then
+		    
+		    If lastUsedVersion.Empty Then
+		      musedOlderVersion = true
+		    End If
 		    
 		    'defaults.SetTextForKey(self.applicationVersion, kLastVersionUsedKey)
 		    StandardUserDefaultsSetTextForKey(self.applicationVersion, kLastVersionUsedKey)
 		    
-		    if firstUsed is nil or ratedAnyVersion then
+		    if firstUsed is nil then ' or ratedAnyVersion then
 		      
 		      //Reset defaults
 		      firstUsed = xojo.core.date.Now
@@ -145,6 +149,9 @@ Protected Class jly_iRate
 		      eventCount = 0
 		      lastReminded = nil
 		      
+		    Elseif ratedAnyVersion Then
+		      
+		      eventCount = 0
 		      
 		    end if
 		    
@@ -171,10 +178,6 @@ Protected Class jly_iRate
 		  end if
 		End Sub
 	#tag EndMethod
-
-	#tag ExternalMethod, Flags = &h0
-		Declare Function NSClassFromString Lib "Foundation.framework" (clsName as CFStringRef) As Ptr
-	#tag EndExternalMethod
 
 	#tag Method, Flags = &h0, Description = 4F70656E732074686520526174696E6773207061676520696E204170702053746F7265
 		Sub openRatingsPageInAppStore()
@@ -203,6 +206,7 @@ Protected Class jly_iRate
 		    
 		    #if DebugBuild
 		      message = "iRate could not open the ratings page because the App Store is not available on the iOS simulator"
+		      self.ratedThisVersion = True
 		    #endif
 		    
 		    xojo.System.DebugLog(message)
@@ -256,23 +260,14 @@ Protected Class jly_iRate
 		    #if TargetIOS
 		      
 		      
-		      declare function currentDevice_ lib "UIKit.framework" selector "currentDevice" (clsRef as ptr) as ptr
-		      declare function systemversion_ lib "UIKit.framework" selector "systemVersion" (obj_id as ptr) as CFStringRef
-		      Dim device as Ptr = currentDevice_(NSClassFromString("UIDevice"))
-		      Dim systemVersion As Text = systemversion_(device)
-		      Dim sSystemVersion As Double
-		      
-		      try
-		        sSystemVersion = Double.FromText(systemVersion)
-		      Catch
-		      end try
+		      Dim sSystemVersion As Double = systemVersion
 		      
 		      //Use new API
 		      if sSystemVersion >= 10.3 and not defaultOldRatingSystem then
 		        
 		        
-		        declare function NSClassFromString lib "Foundation.framework" (clsName as CFStringRef) as ptr
-		        declare sub requestReview_ lib "StoreKit.framework" selector "requestReview" (obj_id as ptr)
+		        Declare Function NSClassFromString Lib "Foundation.framework" (clsName As CFStringRef) As Ptr
+		        Declare Sub requestReview_ Lib "StoreKit.framework" Selector "requestReview" (obj_id As Ptr)
 		        
 		        requestReview_(NSClassFromString("SKStoreReviewController"))
 		        
@@ -329,11 +324,12 @@ Protected Class jly_iRate
 	#tag Method, Flags = &h1
 		Protected Sub promptIfNetworkAvailable()
 		  
-		  //Available if iOSKit is used
-		  'Dim www As new Extensions.Reachability
-		  'if www.isNotReachable then
-		  'Return
-		  'end if
+		  #If kUseUIKit
+		    Dim www As new Extensions.Reachability
+		    if www.isNotReachable then
+		      Return
+		    End If
+		  #EndIf
 		  
 		  promptForRating()
 		End Sub
@@ -483,9 +479,9 @@ Protected Class jly_iRate
 	#tag Method, Flags = &h21
 		Private Function StandardUserDefaults() As ptr
 		  
-		  
+		  Declare Function NSClassFromString Lib "Foundation.framework" (clsName As CFStringRef) As Ptr
 		  declare function standardUserDefaults_ lib "Foundation.framework" selector "standardUserDefaults" (clsRef as ptr) as ptr
-		  static ClassRef as ptr = NSClassFromString("NSUserDefaults")
+		  Static ClassRef As Ptr = NSClassFromString("NSUserDefaults")
 		  declare function alloc lib "Foundation.framework" selector "alloc" (clsRef as ptr) as ptr
 		  
 		  declare function initWithSuiteName_ lib "Foundation.framework" selector "initWithSuiteName:" (obj_id as ptr, suitename as CFStringRef) as ptr
@@ -535,11 +531,11 @@ Protected Class jly_iRate
 		Private Sub StandardUserDefaultsSetTextForKey(value as Text, defaultName As CFStringRef)
 		  Dim defaults As ptr = StandardUserDefaults()
 		  
-		  
+		  Declare Function NSClassFromString Lib "Foundation.framework" (clsName As CFStringRef) As Ptr
 		  declare function stringWithString lib "Foundation.framework" selector "stringWithString:" ( cls as Ptr, value as CFStringRef ) as Ptr
 		  
 		  
-		  Dim s As ptr = stringWithString( NSClassFromString("NSString"), value)
+		  Dim s As Ptr = stringWithString(NSClassFromString("NSString"), value)
 		  
 		  declare sub setObject_ lib "Foundation.framework" selector "setObject:forKey:" (obj_id as ptr, value as ptr, defaultName as CFStringRef)
 		  setObject_(defaults, s, defaultName)
@@ -565,6 +561,31 @@ Protected Class jly_iRate
 		End Function
 	#tag EndMethod
 
+	#tag Method, Flags = &h21
+		Private Function systemVersion() As Double
+		  
+		  Static sSystemVersion As Double
+		  
+		  if sSystemVersion = 0.0 then
+		    
+		    Declare Function NSClassFromString Lib "Foundation.framework" (clsName As CFStringRef) As Ptr
+		    Declare Function currentDevice_ Lib "Foundation.framework" Selector "currentDevice" (clsRef As Ptr) As Ptr
+		    Declare Function systemversion_ Lib "Foundation.framework" Selector "systemVersion" (obj_id As Ptr) As CFStringRef
+		    Dim device As Ptr = currentDevice_(NSClassFromString("UIDevice"))
+		    Dim systemVersion As Text = systemversion_(device)
+		    
+		    
+		    Try
+		      sSystemVersion = Double.FromText(systemVersion)
+		    Catch
+		    End Try
+		    
+		  End If
+		  
+		  Return sSystemVersion
+		End Function
+	#tag EndMethod
+
 	#tag Method, Flags = &h0
 		Function usesPerWeek() As Double
 		  Const SECONDS_IN_A_WEEK = 604800.0
@@ -582,7 +603,11 @@ Protected Class jly_iRate
 
 
 	#tag Note, Name = About
+		History
 		
+		### Version 1.1.0
+		* Added playtime
+		* Updated ratingsURL for iOS 11
 		
 		TODO:
 		
@@ -826,11 +851,11 @@ Protected Class jly_iRate
 			  
 			  if self.appStoreGenreID = kAppStoreGameGenreID then
 			    
-			    Return LabelGameMessage.ReplaceAll("%@", applicationName) 'self.applicationName)
+			    Return LabelGameMessage.ReplaceAll("%@", Self.applicationName)
 			    
 			  Else
 			    
-			    Return LabelAppMessage.ReplaceAll("%@", applicationName) 'self.applicationName)
+			    Return LabelAppMessage.ReplaceAll("%@", self.applicationName)
 			    
 			  end if
 			End Get
@@ -841,7 +866,7 @@ Protected Class jly_iRate
 	#tag ComputedProperty, Flags = &h0
 		#tag Getter
 			Get
-			  return LabelMessageTitle.Replace("%@", applicationName) 'self.applicationName)
+			  return LabelMessageTitle.Replace("%@", self.applicationName)
 			End Get
 		#tag EndGetter
 		messageTitle As Text
@@ -859,6 +884,10 @@ Protected Class jly_iRate
 		Private mratingsURL As Text
 	#tag EndProperty
 
+	#tag Property, Flags = &h21
+		Private musedOlderVersion As Boolean
+	#tag EndProperty
+
 	#tag Property, Flags = &h1
 		#tag Note
 			//TODO 
@@ -869,6 +898,28 @@ Protected Class jly_iRate
 	#tag Property, Flags = &h0
 		onlyPromptIfMainWindowIsAvailable As Boolean
 	#tag EndProperty
+
+	#tag ComputedProperty, Flags = &h0, Description = 4E455721
+		#tag Getter
+			Get
+			  
+			  Dim cnt As Integer = StandardUserDefaultsIntegerForKey(kPlayTimeKey)
+			  
+			  Return cnt
+			  
+			  
+			End Get
+		#tag EndGetter
+		#tag Setter
+			Set
+			  
+			  StandardUserDefaultsSetIntegerForKey(value, kPlayTimeKey)
+			  StandardUserDefaultsSynchronize
+			  
+			End Set
+		#tag EndSetter
+		playtime As Integer
+	#tag EndComputedProperty
 
 	#tag Property, Flags = &h0
 		previewMode As Boolean
@@ -928,10 +979,18 @@ Protected Class jly_iRate
 			  
 			  Dim URLString As Text
 			  
-			  #if TargetIOS
+			  #If TargetIOS
 			    
-			    URLString = "itms-apps://itunes.apple.com/WebObjects/MZStore.woa/wa/viewContentsUserReviews?id=%APPID%&onlyLatestVersion=true&pageNumber=0&sortOrdering=1&type=Purple+Software"
-			    'URLString = iRateiOS7AppStoreURLFormat
+			    If systemVersion >= 11.0 Then
+			      URLString = "itms-apps://itunes.apple.com/app/id%APPID%"
+			      
+			    Else
+			      
+			      //https://itunes.apple.com/us/app/itunes-u/id%APPID%?action=write-review
+			      URLString = "itms-apps://itunes.apple.com/WebObjects/MZStore.woa/wa/viewContentsUserReviews?id=%APPID%&onlyLatestVersion=true&pageNumber=0&sortOrdering=1&type=Purple+Software"
+			      'URLString = iRateiOS7AppStoreURLFormat
+			      
+			    End If
 			    
 			  #elseif TargetDesktop
 			    
@@ -964,6 +1023,15 @@ Protected Class jly_iRate
 		#tag EndNote
 		Attributes( hidden ) Private useAllAvailableLanguages As Boolean
 	#tag EndProperty
+
+	#tag ComputedProperty, Flags = &h0
+		#tag Getter
+			Get
+			  return musedOlderVersion
+			End Get
+		#tag EndGetter
+		usedOlderVersion As Boolean
+	#tag EndComputedProperty
 
 	#tag ComputedProperty, Flags = &h0
 		#tag Getter
@@ -1008,7 +1076,7 @@ Protected Class jly_iRate
 	#tag EndProperty
 
 
-	#tag Constant, Name = iRateVersionNumber, Type = Text, Dynamic = False, Default = \"1.0.1", Scope = Public
+	#tag Constant, Name = iRateVersionNumber, Type = Text, Dynamic = False, Default = \"1.1.0", Scope = Public
 	#tag EndConstant
 
 	#tag Constant, Name = kAppStoreGameGenreID, Type = Double, Dynamic = False, Default = \"6014", Scope = Private
@@ -1029,10 +1097,16 @@ Protected Class jly_iRate
 	#tag Constant, Name = kLastVersionUsedKey, Type = Text, Dynamic = False, Default = \"iRateLastVersionUsed", Scope = Private
 	#tag EndConstant
 
+	#tag Constant, Name = kPlayTimeKey, Type = Text, Dynamic = False, Default = \"iRatePlaytime", Scope = Private
+	#tag EndConstant
+
 	#tag Constant, Name = kRatedVersionKey, Type = Text, Dynamic = False, Default = \"RatedVersionChecked", Scope = Public
 	#tag EndConstant
 
 	#tag Constant, Name = kUseCountKey, Type = Text, Dynamic = False, Default = \"iRateUseCount", Scope = Private
+	#tag EndConstant
+
+	#tag Constant, Name = kUseUIKit, Type = Boolean, Dynamic = False, Default = \"False", Scope = Public, Description = 53657420746F205472756520696620746865206170702075736573204769746875622F6B696E676A352F694F534B6974
 	#tag EndConstant
 
 	#tag Constant, Name = LabelAppMessage, Type = Text, Dynamic = True, Default = \"If you enjoy using %@\x2C would you mind taking a moment to rate it\? It won\xE2\x80\x99t take more than a minute. Thanks for your support!", Scope = Public
@@ -1040,6 +1114,13 @@ Protected Class jly_iRate
 		#Tag Instance, Platform = Any, Language = en, Definition  = \"If you enjoy using %@\x2C would you mind taking a moment to rate it\? It won\xE2\x80\x99t take more than a minute. Thanks for your support!"
 		#Tag Instance, Platform = Any, Language = zh_CN, Definition  = \"\xE5\xA6\x82\xE6\x9E\x9C\xE6\x82\xA8\xE8\xA7\x89\xE5\xBE\x97\xE2\x80\x9C%@\xE2\x80\x9D\xE5\xBE\x88\xE5\xA5\xBD\xE7\x94\xA8\xEF\xBC\x8C\xE5\x8F\xAF\xE5\x90\xA6\xE4\xB8\xBA\xE5\x85\xB6\xE8\xAF\x84\xE4\xB8\x80\xE4\xB8\xAA\xE5\x88\x86\xE6\x95\xB0\xEF\xBC\x9F\xE8\xAF\x84\xE5\x88\x86\xE8\xBF\x87\xE7\xA8\x8B\xE5\x8F\xAA\xE9\x9C\x80\xE8\x8A\xB1\xE8\xB4\xB9\xE5\xBE\x88\xE5\xB0\x91\xE7\x9A\x84\xE6\x97\xB6\xE9\x97\xB4\xE3\x80\x82\xE6\x84\x9F\xE8\xB0\xA2\xE6\x82\xA8\xE7\x9A\x84\xE6\x94\xAF\xE6\x8C\x81\xEF\xBC\x81"
 		#Tag Instance, Platform = Any, Language = de, Definition  = \"Wenn dir %@ gef\xC3\xA4llt\x2C w\xC3\xBCrdest Du es bitte bewerten\? Dies wird nicht l\xC3\xA4nger als eine Minute dauern. Danke f\xC3\xBCr die Unterst\xC3\xBCtzung!"
+		#Tag Instance, Platform = Any, Language = es, Definition  = \"Si te gusta %@\x2C \xC2\xBFpodr\xC3\xADas escribirnos una rese\xC3\xB1a\? No te tomar\xC3\xA1 m\xC3\xA1s de un minuto. \xC2\xA1Gracias por tu apoyo!"
+		#Tag Instance, Platform = Any, Language = ja, Definition  = \"%@\xE3\x82\x92\xE3\x81\x8A\xE4\xBD\xBF\xE3\x81\x84\xE3\x81\x84\xE3\x81\x9F\xE3\x81\xA0\xE3\x81\x8D\xE5\xA4\xA7\xE5\xA4\x89\xE3\x81\x82\xE3\x82\x8A\xE3\x81\x8C\xE3\x81\xA8\xE3\x81\x86\xE3\x81\x94\xE3\x81\x96\xE3\x81\x84\xE3\x81\xBE\xE3\x81\x99\xE3\x80\x82\xE3\x82\x82\xE3\x81\x97\xE3\x82\x88\xE3\x82\x8D\xE3\x81\x97\xE3\x81\x91\xE3\x82\x8C\xE3\x81\xB01\xE5\x88\x86\xE7\xA8\x8B\xE3\x81\xA7\xE6\xB8\x88\xE3\x81\xBF\xE3\x81\xBE\xE3\x81\x99\xE3\x81\xAE\xE3\x81\xA7\xE3\x80\x81\xE3\x81\x93\xE3\x81\xAE\xE3\x82\xA2\xE3\x83\x97\xE3\x83\xAA\xE3\x81\xAE\xE8\xA9\x95\xE4\xBE\xA1\xE3\x82\x92\xE3\x81\x8A\xE9\xA1\x98\xE3\x81\x84\xE3\x81\x97\xE3\x81\xBE\xE3\x81\x99\xE3\x80\x82\xE3\x81\x94\xE5\x8D\x94\xE5\x8A\x9B\xE6\x84\x9F\xE8\xAC\x9D\xE3\x81\x84\xE3\x81\x9F\xE3\x81\x97\xE3\x81\xBE\xE3\x81\x99\xEF\xBC\x81"
+		#Tag Instance, Platform = Any, Language = it, Definition  = \"Ti piace usare %@\? Perch\xC3\xA9 non gli dai un voto\? Non ci vorr\xC3\xA0 pi\xC3\xB9 di un minuto. Grazie per il tuo supporto!"
+		#Tag Instance, Platform = Any, Language = nl, Definition  = \"Als het gebruik van %@ je bevalt\x2C wil je dan een moment nemen om het te beoordelen\? Het duurt nog geen minuut. Bedankt voor je steun!"
+		#Tag Instance, Platform = Any, Language = nb, Definition  = \"Hvis du liker \xC3\xA5 bruke %@\x2C ville du v\xC3\xA6rt grei \xC3\xA5 vurdere appen\? Det vil ikke ta mer enn et minutt. Takk for hjelpen!\n"
+		#Tag Instance, Platform = Any, Language = tr, Definition  = \"E\xC4\x9Fer %@ uygulamam\xC4\xB1z ho\xC5\x9Funuza gittiyse\x2C oy vermek ister misiniz\? Bir dakikadan fazla s\xC3\xBCrmeyecektir. Deste\xC4\x9Finiz i\xC3\xA7in te\xC5\x9Fekk\xC3\xBCrler!"
+		#Tag Instance, Platform = Any, Language = en-GB, Definition  = \"If you enjoy using %@\x2C would you mind taking a moment to rate it\? It won\xE2\x80\x99t take more than a minute. Thanks for your support!"
 	#tag EndConstant
 
 	#tag Constant, Name = LabelCancelButton, Type = Text, Dynamic = True, Default = \"No\x2C Thanks", Scope = Public
@@ -1047,6 +1128,13 @@ Protected Class jly_iRate
 		#Tag Instance, Platform = Any, Language = en, Definition  = \"No\x2C Thanks"
 		#Tag Instance, Platform = Any, Language = zh_CN, Definition  = \"\xE4\xB8\x8D\xE4\xBA\x86\xEF\xBC\x8C\xE8\xB0\xA2\xE8\xB0\xA2"
 		#Tag Instance, Platform = Any, Language = de, Definition  = \"Nein\x2C danke"
+		#Tag Instance, Platform = Any, Language = es, Definition  = \"No\x2C gracias"
+		#Tag Instance, Platform = Any, Language = ja, Definition  = \"\xE3\x81\x84\xE3\x81\x88\xE3\x80\x81\xE7\xB5\x90\xE6\xA7\x8B\xE3\x81\xA7\xE3\x81\x99"
+		#Tag Instance, Platform = Any, Language = it, Definition  = \"No\x2C grazie"
+		#Tag Instance, Platform = Any, Language = nl, Definition  = \"Nee\x2C bedankt"
+		#Tag Instance, Platform = Any, Language = nb, Definition  = \"Ellers takk"
+		#Tag Instance, Platform = Any, Language = tr, Definition  = \"Te\xC5\x9Fekk\xC3\xBCrler\x2C Hay\xC4\xB1r"
+		#Tag Instance, Platform = Any, Language = en-GB, Definition  = \"No\x2C Thanks"
 	#tag EndConstant
 
 	#tag Constant, Name = LabelGameMessage, Type = Text, Dynamic = True, Default = \"If you enjoy playing %@\x2C would you mind taking a moment to rate it\? It won\xE2\x80\x99t take more than a minute. Thanks for your support!", Scope = Public
@@ -1054,6 +1142,13 @@ Protected Class jly_iRate
 		#Tag Instance, Platform = Any, Language = en, Definition  = \"If you enjoy playing %@\x2C would you mind taking a moment to rate it\? It won\xE2\x80\x99t take more than a minute. Thanks for your support!"
 		#Tag Instance, Platform = Any, Language = zh_CN, Definition  = \"\xE5\xA6\x82\xE6\x9E\x9C\xE6\x82\xA8\xE8\xA7\x89\xE5\xBE\x97\xE2\x80\x9C%@\xE2\x80\x9D\xE5\xBE\x88\xE5\xA5\xBD\xE7\x8E\xA9\xEF\xBC\x8C\xE5\x8F\xAF\xE5\x90\xA6\xE4\xB8\xBA\xE5\x85\xB6\xE8\xAF\x84\xE4\xB8\x80\xE4\xB8\xAA\xE5\x88\x86\xE6\x95\xB0\xEF\xBC\x9F\xE8\xAF\x84\xE5\x88\x86\xE8\xBF\x87\xE7\xA8\x8B\xE5\x8F\xAA\xE9\x9C\x80\xE8\x8A\xB1\xE8\xB4\xB9\xE5\xBE\x88\xE5\xB0\x91\xE7\x9A\x84\xE6\x97\xB6\xE9\x97\xB4\xE3\x80\x82\xE6\x84\x9F\xE8\xB0\xA2\xE6\x82\xA8\xE7\x9A\x84\xE6\x94\xAF\xE6\x8C\x81\xEF\xBC\x81"
 		#Tag Instance, Platform = Any, Language = de, Definition  = \"Wenn dir %@ gef\xC3\xA4llt\x2C w\xC3\xBCrdest Du es bitte bewerten\? Dies wird nicht l\xC3\xA4nger als eine Minute dauern. Danke f\xC3\xBCr die Unterst\xC3\xBCtzung!"
+		#Tag Instance, Platform = Any, Language = es, Definition  = \"Si te gusta jugar a %@\x2C \xC2\xBFpodr\xC3\xADas escribirnos una rese\xC3\xB1a\? No te tomar\xC3\xA1 m\xC3\xA1s de un minuto. \xC2\xA1Gracias por tu apoyo!"
+		#Tag Instance, Platform = Any, Language = ja, Definition  = \"%@\xE3\x82\x92\xE3\x83\x97\xE3\x83\xAC\xE3\x82\xA4\xE3\x81\x97\xE3\x81\xA6\xE3\x81\x84\xE3\x81\x9F\xE3\x81\xA0\xE3\x81\x8D\xE5\xA4\xA7\xE5\xA4\x89\xE3\x81\x82\xE3\x82\x8A\xE3\x81\x8C\xE3\x81\xA8\xE3\x81\x86\xE3\x81\x94\xE3\x81\x96\xE3\x81\x84\xE3\x81\xBE\xE3\x81\x99\xE3\x80\x82\xE3\x82\x82\xE3\x81\x97\xE3\x82\x88\xE3\x82\x8D\xE3\x81\x97\xE3\x81\x91\xE3\x82\x8C\xE3\x81\xB01\xE5\x88\x86\xE7\xA8\x8B\xE3\x81\xA7\xE6\xB8\x88\xE3\x81\xBF\xE3\x81\xBE\xE3\x81\x99\xE3\x81\xAE\xE3\x81\xA7\xE3\x80\x81\xE3\x81\x93\xE3\x81\xAE\xE3\x82\xA2\xE3\x83\x97\xE3\x83\xAA\xE3\x81\xAE\xE8\xA9\x95\xE4\xBE\xA1\xE3\x82\x92\xE3\x81\x8A\xE9\xA1\x98\xE3\x81\x84\xE3\x81\x97\xE3\x81\xBE\xE3\x81\x99\xE3\x80\x82\xE3\x81\x94\xE5\x8D\x94\xE5\x8A\x9B\xE6\x84\x9F\xE8\xAC\x9D\xE3\x81\x84\xE3\x81\x9F\xE3\x81\x97\xE3\x81\xBE\xE3\x81\x99\xEF\xBC\x81"
+		#Tag Instance, Platform = Any, Language = it, Definition  = \"Ti piace giocare a %@\? Perch\xC3\xA9 non gli dai un voto\? Non ci vorr\xC3\xA0 pi\xC3\xB9 di un minuto. Grazie per il tuo supporto!"
+		#Tag Instance, Platform = Any, Language = nl, Definition  = \"Als het spelen van %@ je bevalt\x2C wil je dan een moment nemen om het te beoordelen\? Het duurt nog geen minuut. Bedankt voor je steun!"
+		#Tag Instance, Platform = Any, Language = nb, Definition  = \"Hvis du liker \xC3\xA5 spille %@\x2C ville du v\xC3\xA6rt grei \xC3\xA5 vurdere spillet\? Det vil ikke ta mer enn et minutt. Takk for hjelpen!"
+		#Tag Instance, Platform = Any, Language = tr, Definition  = \"E\xC4\x9Fer %@ oyunumuz ho\xC5\x9Funuza gittiyse\x2C oy vermek ister misiniz\? Bir dakikadan fazla s\xC3\xBCrmeyecektir. Deste\xC4\x9Finiz i\xC3\xA7in te\xC5\x9Fekk\xC3\xBCrler!"
+		#Tag Instance, Platform = Any, Language = en-GB, Definition  = \"If you enjoy playing %@\x2C would you mind taking a moment to rate it\? It won\xE2\x80\x99t take more than a minute. Thanks for your support!"
 	#tag EndConstant
 
 	#tag Constant, Name = LabelMessageTitle, Type = Text, Dynamic = True, Default = \"Rate %@", Scope = Public
@@ -1061,6 +1156,13 @@ Protected Class jly_iRate
 		#Tag Instance, Platform = Any, Language = fr, Definition  = \"Notez %@"
 		#Tag Instance, Platform = Any, Language = zh_CN, Definition  = \"\xE4\xB8\xBA\xE2\x80\x9C%@\xE2\x80\x9D\xE8\xAF\x84\xE5\x88\x86"
 		#Tag Instance, Platform = Any, Language = de, Definition  = \"Bewerte %@"
+		#Tag Instance, Platform = Any, Language = es, Definition  = \"Rese\xC3\xB1a %@"
+		#Tag Instance, Platform = Any, Language = ja, Definition  = \"%@\xE3\x81\xAE\xE8\xA9\x95\xE4\xBE\xA1"
+		#Tag Instance, Platform = Any, Language = it, Definition  = \"Vota %@"
+		#Tag Instance, Platform = Any, Language = nl, Definition  = \"Beoordeel %@"
+		#Tag Instance, Platform = Any, Language = nb, Definition  = \"Vurder %@"
+		#Tag Instance, Platform = Any, Language = tr, Definition  = \"%@ Uygulamas\xC4\xB1n\xC4\xB1 Oyla"
+		#Tag Instance, Platform = Any, Language = en-GB, Definition  = \"Rate %@"
 	#tag EndConstant
 
 	#tag Constant, Name = LabelRateButton, Type = Text, Dynamic = True, Default = \"Rate It Now", Scope = Public
@@ -1068,6 +1170,13 @@ Protected Class jly_iRate
 		#Tag Instance, Platform = Any, Language = fr, Definition  = \"Noter maintenant"
 		#Tag Instance, Platform = Any, Language = zh_CN, Definition  = \"\xE7\x8E\xB0\xE5\x9C\xA8\xE5\x8E\xBB\xE8\xAF\x84\xE5\x88\x86"
 		#Tag Instance, Platform = Any, Language = de, Definition  = \"Jetzt bewerten"
+		#Tag Instance, Platform = Any, Language = es, Definition  = \"Escribir rese\xC3\xB1a ahora"
+		#Tag Instance, Platform = Any, Language = ja, Definition  = \"\xE4\xBB\x8A\xE3\x81\x99\xE3\x81\x90\xE8\xA9\x95\xE4\xBE\xA1\xE3\x81\x99\xE3\x82\x8B"
+		#Tag Instance, Platform = Any, Language = it, Definition  = \"Vota ora"
+		#Tag Instance, Platform = Any, Language = nl, Definition  = \"Beoordeel nu"
+		#Tag Instance, Platform = Any, Language = nb, Definition  = \"Vurder n\xC3\xA5"
+		#Tag Instance, Platform = Any, Language = tr, Definition  = \"\xC5\x9Eimdi Oyla"
+		#Tag Instance, Platform = Any, Language = en-GB, Definition  = \"Rate It Now"
 	#tag EndConstant
 
 	#tag Constant, Name = LabelRemindButton, Type = Text, Dynamic = True, Default = \"Remind Me Later", Scope = Public
@@ -1075,6 +1184,13 @@ Protected Class jly_iRate
 		#Tag Instance, Platform = Any, Language = en, Definition  = \"Remind Me Later"
 		#Tag Instance, Platform = Any, Language = zh_CN, Definition  = \"\xE7\xA8\x8D\xE5\x90\x8E\xE5\x86\x8D\xE8\xAF\xB4"
 		#Tag Instance, Platform = Any, Language = de, Definition  = \"Sp\xC3\xA4ter erinnern"
+		#Tag Instance, Platform = Any, Language = es, Definition  = \"Record\xC3\xA1rmelo m\xC3\xA1s tarde"
+		#Tag Instance, Platform = Any, Language = ja, Definition  = \"\xE5\xBE\x8C\xE3\x81\xA7\xE3\x81\x99\xE3\x82\x8B"
+		#Tag Instance, Platform = Any, Language = it, Definition  = \"Ricordamelo dopo"
+		#Tag Instance, Platform = Any, Language = nl, Definition  = \"Herinner me er later aan"
+		#Tag Instance, Platform = Any, Language = nb, Definition  = \"P\xC3\xA5minn meg senere"
+		#Tag Instance, Platform = Any, Language = tr, Definition  = \"Sonra Hat\xC4\xB1rlat"
+		#Tag Instance, Platform = Any, Language = en-GB, Definition  = \"Remind Me Later"
 	#tag EndConstant
 
 	#tag Constant, Name = SECONDS_IN_A_DAY, Type = Double, Dynamic = False, Default = \"86400", Scope = Private
@@ -1091,7 +1207,45 @@ Protected Class jly_iRate
 
 	#tag ViewBehavior
 		#tag ViewProperty
-			Name="applicationBundleID"
+			Name="Name"
+			Visible=true
+			Group="ID"
+			Type="String"
+		#tag EndViewProperty
+		#tag ViewProperty
+			Name="Index"
+			Visible=true
+			Group="ID"
+			InitialValue="-2147483648"
+			Type="Integer"
+		#tag EndViewProperty
+		#tag ViewProperty
+			Name="Super"
+			Visible=true
+			Group="ID"
+			Type="String"
+		#tag EndViewProperty
+		#tag ViewProperty
+			Name="Left"
+			Visible=true
+			Group="Position"
+			InitialValue="0"
+			Type="Integer"
+		#tag EndViewProperty
+		#tag ViewProperty
+			Name="Top"
+			Visible=true
+			Group="Position"
+			InitialValue="0"
+			Type="Integer"
+		#tag EndViewProperty
+		#tag ViewProperty
+			Name="appStoreGenreID"
+			Group="Behavior"
+			Type="Integer"
+		#tag EndViewProperty
+		#tag ViewProperty
+			Name="appStoreCountry"
 			Group="Behavior"
 			Type="Text"
 		#tag EndViewProperty
@@ -1106,88 +1260,17 @@ Protected Class jly_iRate
 			Type="Text"
 		#tag EndViewProperty
 		#tag ViewProperty
-			Name="appStoreCountry"
+			Name="applicationBundleID"
 			Group="Behavior"
 			Type="Text"
 		#tag EndViewProperty
 		#tag ViewProperty
-			Name="appStoreGenreID"
-			Group="Behavior"
-			Type="Integer"
-		#tag EndViewProperty
-		#tag ViewProperty
-			Name="appStoreID"
-			Group="Behavior"
-			Type="Integer"
-		#tag EndViewProperty
-		#tag ViewProperty
-			Name="AppStoreIDKey"
-			Group="Behavior"
-			InitialValue="iRateAppStoreIDKey"
-			Type="Text"
-		#tag EndViewProperty
-		#tag ViewProperty
-			Name="daysUntilPrompt"
-			Group="Behavior"
-			Type="Single"
-		#tag EndViewProperty
-		#tag ViewProperty
-			Name="declinedThisVersion"
+			Name="promptForNewVersionIfUserRated"
 			Group="Behavior"
 			Type="Boolean"
-		#tag EndViewProperty
-		#tag ViewProperty
-			Name="defaultOldRatingSystem"
-			Group="Behavior"
-			Type="Boolean"
-		#tag EndViewProperty
-		#tag ViewProperty
-			Name="eventCount"
-			Group="Behavior"
-			Type="Integer"
-		#tag EndViewProperty
-		#tag ViewProperty
-			Name="eventsUntilPrompt"
-			Group="Behavior"
-			Type="Integer"
-		#tag EndViewProperty
-		#tag ViewProperty
-			Name="Index"
-			Visible=true
-			Group="ID"
-			InitialValue="-2147483648"
-			Type="Integer"
-		#tag EndViewProperty
-		#tag ViewProperty
-			Name="Left"
-			Visible=true
-			Group="Position"
-			InitialValue="0"
-			Type="Integer"
-		#tag EndViewProperty
-		#tag ViewProperty
-			Name="message"
-			Group="Behavior"
-			Type="Text"
-		#tag EndViewProperty
-		#tag ViewProperty
-			Name="messageTitle"
-			Group="Behavior"
-			Type="Text"
-		#tag EndViewProperty
-		#tag ViewProperty
-			Name="Name"
-			Visible=true
-			Group="ID"
-			Type="String"
 		#tag EndViewProperty
 		#tag ViewProperty
 			Name="onlyPromptIfMainWindowIsAvailable"
-			Group="Behavior"
-			Type="Boolean"
-		#tag EndViewProperty
-		#tag ViewProperty
-			Name="previewMode"
 			Group="Behavior"
 			Type="Boolean"
 		#tag EndViewProperty
@@ -1197,12 +1280,12 @@ Protected Class jly_iRate
 			Type="Boolean"
 		#tag EndViewProperty
 		#tag ViewProperty
-			Name="promptForNewVersionIfUserRated"
+			Name="verboseLogging"
 			Group="Behavior"
 			Type="Boolean"
 		#tag EndViewProperty
 		#tag ViewProperty
-			Name="ratedThisVersion"
+			Name="previewMode"
 			Group="Behavior"
 			Type="Boolean"
 		#tag EndViewProperty
@@ -1212,21 +1295,14 @@ Protected Class jly_iRate
 			Type="Text"
 		#tag EndViewProperty
 		#tag ViewProperty
-			Name="remindPeriod"
+			Name="AppStoreIDKey"
 			Group="Behavior"
-			Type="Single"
+			InitialValue="iRateAppStoreIDKey"
+			Type="Text"
 		#tag EndViewProperty
 		#tag ViewProperty
-			Name="Super"
-			Visible=true
-			Group="ID"
-			Type="String"
-		#tag EndViewProperty
-		#tag ViewProperty
-			Name="Top"
-			Visible=true
-			Group="Position"
-			InitialValue="0"
+			Name="appStoreID"
+			Group="Behavior"
 			Type="Integer"
 		#tag EndViewProperty
 		#tag ViewProperty
@@ -1235,9 +1311,19 @@ Protected Class jly_iRate
 			Type="Integer"
 		#tag EndViewProperty
 		#tag ViewProperty
-			Name="usesPerWeekForPrompt"
+			Name="declinedThisVersion"
 			Group="Behavior"
-			Type="Single"
+			Type="Boolean"
+		#tag EndViewProperty
+		#tag ViewProperty
+			Name="ratedThisVersion"
+			Group="Behavior"
+			Type="Boolean"
+		#tag EndViewProperty
+		#tag ViewProperty
+			Name="eventCount"
+			Group="Behavior"
+			Type="Integer"
 		#tag EndViewProperty
 		#tag ViewProperty
 			Name="usesUntilPrompt"
@@ -1245,7 +1331,47 @@ Protected Class jly_iRate
 			Type="Integer"
 		#tag EndViewProperty
 		#tag ViewProperty
-			Name="verboseLogging"
+			Name="eventsUntilPrompt"
+			Group="Behavior"
+			Type="Integer"
+		#tag EndViewProperty
+		#tag ViewProperty
+			Name="daysUntilPrompt"
+			Group="Behavior"
+			Type="Single"
+		#tag EndViewProperty
+		#tag ViewProperty
+			Name="usesPerWeekForPrompt"
+			Group="Behavior"
+			Type="Single"
+		#tag EndViewProperty
+		#tag ViewProperty
+			Name="remindPeriod"
+			Group="Behavior"
+			Type="Single"
+		#tag EndViewProperty
+		#tag ViewProperty
+			Name="messageTitle"
+			Group="Behavior"
+			Type="Text"
+		#tag EndViewProperty
+		#tag ViewProperty
+			Name="message"
+			Group="Behavior"
+			Type="Text"
+		#tag EndViewProperty
+		#tag ViewProperty
+			Name="defaultOldRatingSystem"
+			Group="Behavior"
+			Type="Boolean"
+		#tag EndViewProperty
+		#tag ViewProperty
+			Name="playtime"
+			Group="Behavior"
+			Type="Integer"
+		#tag EndViewProperty
+		#tag ViewProperty
+			Name="usedOlderVersion"
 			Group="Behavior"
 			Type="Boolean"
 		#tag EndViewProperty

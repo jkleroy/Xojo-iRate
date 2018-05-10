@@ -6,15 +6,15 @@ Begin iosView View1
    NavigationBarVisible=   True
    TabIcon         =   ""
    TabTitle        =   ""
-   Title           =   "iOS Example"
+   Title           =   "iOS iRate Example"
    Top             =   0
    Begin iOSButton Button1
       AccessibilityHint=   ""
       AccessibilityLabel=   ""
-      AutoLayout      =   Button1, 7, , 0, False, +1.00, 1, 1, 100, 
-      AutoLayout      =   Button1, 9, <Parent>, 9, False, +1.00, 1, 1, 0, 
-      AutoLayout      =   Button1, 3, , 0, False, +1.00, 1, 1, 124, 
-      AutoLayout      =   Button1, 8, , 0, False, +1.00, 1, 1, 30, 
+      AutoLayout      =   Button1, 7, , 0, False, +1.00, 1, 1, 100, , True
+      AutoLayout      =   Button1, 9, <Parent>, 9, False, +1.00, 1, 1, 0, , True
+      AutoLayout      =   Button1, 3, <Parent>, 3, False, +1.00, 1, 1, 124, , True
+      AutoLayout      =   Button1, 8, , 0, False, +1.00, 1, 1, 30, , True
       Caption         =   "Rate in app"
       Enabled         =   True
       Height          =   30.0
@@ -31,10 +31,10 @@ Begin iosView View1
    Begin iOSButton Button2
       AccessibilityHint=   ""
       AccessibilityLabel=   ""
-      AutoLayout      =   Button2, 7, , 0, False, +1.00, 1, 1, 179, 
-      AutoLayout      =   Button2, 9, <Parent>, 9, False, +1.00, 1, 1, 0, 
-      AutoLayout      =   Button2, 3, <Parent>, 3, False, +1.00, 1, 1, 198, 
-      AutoLayout      =   Button2, 8, , 0, False, +1.00, 1, 1, 30, 
+      AutoLayout      =   Button2, 7, , 0, False, +1.00, 1, 1, 179, , True
+      AutoLayout      =   Button2, 9, <Parent>, 9, False, +1.00, 1, 1, 0, , True
+      AutoLayout      =   Button2, 3, <Parent>, 3, False, +1.00, 1, 1, 198, , True
+      AutoLayout      =   Button2, 8, , 0, False, +1.00, 1, 1, 30, , True
       Caption         =   "Rate on App Store"
       Enabled         =   True
       Height          =   30.0

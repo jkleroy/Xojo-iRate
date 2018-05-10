@@ -4,7 +4,7 @@ Inherits IOSApplication
 	#tag CompatibilityFlags = TargetIOS
 	#tag Event
 		Sub Open()
-		  
+		  //Make sure to correctly set the appStoreID
 		  
 		  
 		  //iRate system
@@ -26,11 +26,6 @@ Inherits IOSApplication
 
 
 	#tag ViewBehavior
-		#tag ViewProperty
-			Name="iRate"
-			Group="Behavior"
-			Type="Integer"
-		#tag EndViewProperty
 	#tag EndViewBehavior
 End Class
 #tag EndClass
